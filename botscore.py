@@ -28,14 +28,15 @@ access_token=access_token
 )
 if __name__ == '__main__':
     wb = load_workbook('input.xlsx')
-    sheet = wb['Sheet1']
-    #sheet2=wb['Sheet2']
+    sheet = wb['Sheet4']
+    sheet2=wb['Sheet2']
     print("Number of entries is:" ,sheet.max_row-1, "accounts")
     i=2
     for row in range(2, sheet.max_row+1):
         account=sheet['A' + str(row)].value
         skey=sheet['B' + str(row)].value
         package=sheet['C' + str(row)].value
+        engagementmgr=sheet['D' + str(row)].value
         print("*************************************************************************************************************************************************************")
         print("Running for "+ account  +"")
         # PULL CONFIGURATIONS
@@ -81,11 +82,15 @@ if __name__ == '__main__':
                 policyname= str(policy['policyName'])
                 botmanagementenabled=s.get(baseurl + ("/appsec/v1/configs/"+configid+"/versions/"+prodversion+"/security-policies/"+pid+"/bot-management-settings?accountSwitchKey="+skey))
                 botenabled=json.loads(botmanagementenabled.text)
+                botscorenabled=0
+                bmpenabled=0
+                bsfinal="false"
                 if botenabled["enableBotManagement"] == True:
-                	#print("The policy " +policyname+ "has Botmanager enabled, lets check the Botscore here" +configname+"test")
+                    #print("The policy " +policyname+ "has Botmanager enabled, lets check the Botscore here" +configname+"test")
                     botscorecheck=s.get(baseurl + ("/appsec/v1/configs/"+configid+"/versions/"+prodversion+"/security-policies/"+pid+"/transactional-endpoints/bot-protection?accountSwitchKey="+skey))
                     botscore=json.loads(botscorecheck.text)
                     for api in botscore["operations"]:
+                        bmpenabled=1
                         testbsinline=""
                         testbsios=""
                         testbsdroid=""
@@ -112,7 +117,20 @@ if __name__ == '__main__':
                         else:
                             continue;
                         if str(testbsdroid) or str(testbsios) or str(testbsinline) or str(testbsstandard) != "[]":
+                            botscorenabled=botscorenabled+1
                             print("The policy" +policyname+" and the config "+configname+" has Botscore enabled")
                             break;
                         else:
                             print("The policy"+policyname+" and the config "+configname+"does not have Botscore enabled")
+                sheet2['A' + str(i)].value=account
+                sheet2['B' + str(i)].value=package
+                sheet2['C' + str(i)].value=engagementmgr
+                sheet2['D' + str(i)].value=configname
+                sheet2['E' + str(i)].value=policyname
+                if botscorenabled > 0 and bmpenabled ==1:
+                    bsfinal="true"
+                if bmpenabled == 0:
+                    bsfinal="NA"
+                sheet2['F' + str(i)].value=bsfinal
+                wb.save("input.xlsx")
+                i+=1;       
